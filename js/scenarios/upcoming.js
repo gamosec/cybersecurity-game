@@ -5,7 +5,6 @@
   const CE = window.CyberEscape;
 
   [
-    { id: 'passwords', number: 3, icon: 'key', title: 'كلمات المرور والمصادقة', heading: 'خزنة الحسابات' },
     { id: 'social-engineering', number: 4, icon: 'users', title: 'الهندسة الاجتماعية', heading: 'الزائر غير المتوقع' }
   ].forEach((s) => CE.registerScenario(Object.assign({ comingSoon: true }, s)));
 })();
