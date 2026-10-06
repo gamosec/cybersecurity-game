@@ -59,11 +59,47 @@
 
   /* ---------------- التحجيم والشاشات ---------------- */
 
+  // وضعان للعرض: مسرح ثابت 1600×900 يتم تحجيمه (الشاشات الأفقية)، أو تخطيط مرن
+  // للشاشات العمودية (الهواتف) حيث تعيد CSS ترتيب العناصر ويمكن سحب الغرفة أفقيًا.
+  function isFluid() {
+    return document.body.classList.contains('fluid');
+  }
+
   function fit() {
-    const s = Math.min(window.innerWidth / CE.STAGE_W, window.innerHeight / CE.STAGE_H);
-    state.scale = s;
-    stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
-    document.body.classList.toggle('portrait', window.innerHeight > window.innerWidth && window.innerWidth < 900);
+    const fluid = window.innerWidth / window.innerHeight < 1.1;
+    document.body.classList.toggle('fluid', fluid);
+    if (fluid) {
+      state.scale = 1;
+      stage.style.transform = 'none';
+    } else {
+      const s = Math.min(window.innerWidth / CE.STAGE_W, window.innerHeight / CE.STAGE_H);
+      state.scale = s;
+      stage.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+    }
+    const svg = $('scene').querySelector('svg');
+    if (svg && state.scenario) {
+      svg.setAttribute('viewBox', sceneViewBox(state.scenario));
+      centerScene();
+    }
+  }
+
+  // في الوضع المرن تُقصّ المساحة الفارغة حول الغرفة
+  function sceneViewBox(s) {
+    return isFluid() ? (s.mobileViewBox || '240 10 1120 840') : s.viewBox;
+  }
+
+  function centerScene() {
+    const scene = $('scene');
+    scene.scrollLeft = (scene.scrollWidth - scene.clientWidth) / 2;
+  }
+
+  function shuffle(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
   const screenArt = {
@@ -140,11 +176,15 @@
     show('screen-game');
     const scene = $('scene');
     scene.innerHTML = sceneSvg(s, 'scene-svg', true);
-    setupHotspots(scene.querySelector('svg'));
+    const svg = scene.querySelector('svg');
+    svg.setAttribute('viewBox', sceneViewBox(s));
+    setupHotspots(svg);
+    centerScene();
 
     $('hud-shields').innerHTML = s.challenges.map((c, i) =>
       '<span class="shield-badge" data-slot="' + i + '">' + icons.shield + '</span>').join('');
     updateHud();
+    if (isFluid()) toast('اسحب الغرفة يمينًا ويسارًا لاستكشاف جميع العناصر');
     state.timerId = window.setInterval(tick, 1000);
   }
 
@@ -216,12 +256,15 @@
       return;
     }
     const ch = challengeById(id);
+    $('toast').classList.remove('visible');
     Sound.open();
     state.active = id;
     $('popup-title').textContent = ch.title;
-    $('popup-options').innerHTML = ch.options.map((o, i) =>
+    // ترتيب الخيارات عشوائي في كل مرة حتى لا يُحفظ موضع الإجابة الصحيحة
+    const order = shuffle(ch.options.map((o, i) => i));
+    $('popup-options').innerHTML = order.map((i) => ch.options[i]).map((o, k) =>
       '<li><label class="opt">' +
-      '<input type="checkbox" value="' + i + '">' +
+      '<input type="checkbox" value="' + order[k] + '">' +
       '<span class="opt-box" aria-hidden="true">' + icons.check + '</span>' +
       '<span class="opt-text">' + U.escape(o.text) + '</span>' +
       '</label></li>').join('');
@@ -233,6 +276,11 @@
   }
 
   function positionPopup(id) {
+    if (isFluid()) { // في الهاتف تظهر النافذة كلوحة سفلية عبر CSS
+      popup.style.left = '';
+      popup.style.top = '';
+      return;
+    }
     const sr = stage.getBoundingClientRect();
     const k = state.scale;
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
@@ -271,7 +319,8 @@
       toast('اختر خيارًا واحدًا على الأقل');
       return;
     }
-    const correct = ch.options.every((o, i) => !!o.correct === inputs[i].checked);
+    const picked = inputs.filter((i) => i.checked).map((i) => Number(i.value));
+    const correct = ch.options.every((o, i) => !!o.correct === picked.includes(i));
     state.answers[id] = correct;
     state.order.push(id);
     if (correct) state.score += state.scenario.pointsPerChallenge;
@@ -463,6 +512,7 @@
       html: '<ul>' +
         '<li>ابحث في الغرفة عن <strong>' + s.challenges.length + '</strong> عناصر قد تشكّل خطرًا على أمن المعلومات.</li>' +
         '<li>انقر على العنصر، ثم اختر <strong>جميع</strong> المخاطر المرتبطة به واضغط زر التأكيد الأخضر.</li>' +
+        '<li>انتبه: قد يكون خيار واحد صحيحًا، أو أكثر، أو جميع الخيارات. ولا تُحتسب الإجابة إلا إذا كانت مطابقة تمامًا.</li>' +
         '<li>تحصل على <strong>' + s.pointsPerChallenge + '</strong> نقطة لكل إجابة صحيحة بالكامل، ونقاط إضافية (حتى ' + s.timeBonusMax + ') حسب الوقت المتبقي.</li>' +
         '<li>استخدم زر الجرس للحصول على تلميح بمواقع العناصر المتبقية. يتوقف المؤقت أثناء قراءة هذه النافذة.</li>' +
         '</ul>'

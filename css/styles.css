@@ -299,7 +299,7 @@ svg { display: block; }
 /* نافذة التحدي */
 .popup {
   position: absolute;
-  width: 450px;
+  width: 500px;
   border-radius: 34px;
   background: var(--panel);
   box-shadow: 0 18px 40px rgba(0, 0, 0, .3);
@@ -480,20 +480,147 @@ svg { display: block; }
 .btn-solid.btn-light { background: #9fd0ee; }
 .btn-solid:hover, .btn-solid:focus-visible { filter: brightness(1.08); transform: translateY(-2px); outline: none; }
 
-/* ============ تلميح الاتجاه للهاتف ============ */
-#rotate-hint {
-  display: none;
-  position: fixed;
-  left: 12px; right: 12px; bottom: 12px;
-  padding: 10px 16px;
-  border-radius: 14px;
-  background: rgba(20, 42, 69, .95);
-  color: #fff;
-  font-size: 15px;
-  text-align: center;
-  z-index: 100;
+/* ============ الوضع المرن للشاشات العمودية (الهواتف) ============ */
+body.fluid #stage {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  box-shadow: none;
+  background: var(--navy-bg);
 }
-body.portrait #rotate-hint { display: block; }
+body.fluid .screen { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* القائمة */
+.fluid .menu-header { padding: 28px 16px 0; }
+.fluid .kicker { font-size: 16px; }
+.fluid .menu-header h1 { font-size: clamp(30px, 9vw, 48px); margin: 2px 0 6px; }
+.fluid .menu-lead { font-size: 15px; }
+.fluid .scenario-list {
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 14px;
+  padding: 22px 16px 32px;
+}
+.fluid .scenario-card { padding: 10px 10px 14px; border-width: 3px; border-radius: 18px; }
+.fluid .card-thumb { height: 110px; border-radius: 12px; margin-bottom: 6px; }
+.fluid .scenario-card.locked .card-thumb > svg { width: 64px; height: 64px; }
+.fluid .card-lock { width: 30px; height: 30px; top: 8px; left: 8px; }
+.fluid .card-lock svg { width: 18px; height: 18px; }
+.fluid .card-num { font-size: 12px; }
+.fluid .card-title { font-size: 16px; min-height: 44px; }
+.fluid .card-sub { font-size: 13px; }
+.fluid .card-status { font-size: 13px; padding: 4px 12px; margin-top: 8px; }
+
+/* شاشة البداية */
+.fluid #screen-intro.active { display: flex; flex-direction: column; }
+.fluid .intro-art { flex: none; height: 36%; min-height: 220px; }
+.fluid .intro-panel { flex: 1 0 auto; }
+.fluid .intro-content { padding: 22px 16px 0; }
+.fluid .intro-kicker { font-size: 18px; }
+.fluid .intro-heading { font-size: clamp(28px, 8.5vw, 44px); white-space: normal; margin: 4px 0 12px; }
+.fluid .intro-scenario { font-size: 14px; padding: 4px 14px; }
+.fluid .intro-desc { font-size: 15px; margin-bottom: 22px; }
+.fluid .btn-pill { min-width: 200px; height: 62px; font-size: 22px; border-width: 3px; }
+.fluid .btn-link { position: static; display: block; margin: 16px auto 20px; font-size: 14px; }
+
+/* اللعب */
+.fluid #screen-game.active { display: flex; flex-direction: column; overflow: hidden; }
+.fluid .hud { position: relative; order: -1; flex: none; height: auto; padding: 8px 10px; gap: 8px; }
+.fluid .hud-stats { gap: 12px; padding: 2px 16px; border-width: 3px; }
+.fluid .stat-label { font-size: 11px; }
+.fluid .stat-value { font-size: 22px; }
+.fluid .stat-sep { height: 30px; width: 2px; }
+.fluid .hud-shields { gap: 5px; padding: 0; border: 0; }
+.fluid .shield-badge { width: 34px; height: 34px; border-width: 3px; }
+.fluid .shield-badge svg { width: 20px; height: 20px; }
+.fluid .scene {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  direction: ltr;
+  -webkit-overflow-scrolling: touch;
+}
+.fluid .scene-svg { flex: none; height: min(100%, 130vw); width: auto; aspect-ratio: 1120 / 840; }
+.fluid .side-btn {
+  position: absolute;
+  top: auto !important;
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--blue);
+  border-radius: 50%;
+}
+.fluid .side-btn svg { width: 26px; height: 26px; }
+.fluid #btn-hint { left: 12px; bottom: 16px; }
+.fluid #btn-sound { right: 12px; bottom: 16px; }
+.fluid #btn-help { right: 12px; bottom: 74px; }
+.fluid .toast { bottom: 80px; max-width: calc(100% - 32px); font-size: 14px; white-space: normal; text-align: center; padding: 10px 18px; }
+
+/* نافذة التحدي كلوحة سفلية */
+.fluid .popup {
+  left: 0 !important;
+  right: 0;
+  top: auto !important;
+  bottom: 0;
+  width: 100%;
+  max-height: 80%;
+  overflow-y: auto;
+  border-radius: 22px 22px 0 0;
+}
+.fluid .popup-head { padding: 12px 16px; }
+.fluid .popup-head h3 { font-size: 18px; }
+.fluid .popup-close { width: 34px; height: 34px; font-size: 24px; }
+.fluid .popup-q { margin: 10px 16px 0; font-size: 13px; }
+.fluid .popup-options { padding: 2px 16px; }
+.fluid .popup-options li { margin: 8px 0; }
+.fluid .opt { font-size: 16px; gap: 12px; }
+.fluid .opt-box { width: 32px; height: 32px; border-radius: 8px; }
+.fluid .opt-box svg { width: 22px; height: 22px; }
+.fluid .popup-foot { padding: 2px 0 calc(14px + env(safe-area-inset-bottom)); }
+.fluid .btn-confirm { width: 64px; height: 64px; border-width: 3px; }
+.fluid .btn-confirm svg { width: 34px; height: 34px; }
+
+/* النوافذ المنبثقة */
+.fluid .modal { padding: 12px; }
+.fluid .modal-card { width: 100%; min-height: 0; max-height: 100%; border-width: 3px; border-radius: 20px; }
+.fluid .modal-title { font-size: 24px; padding: 12px; border-bottom-width: 3px; }
+.fluid .modal-body { font-size: 16px; line-height: 1.7; padding: 14px 18px; justify-content: flex-start; }
+.fluid .modal-body ul { padding-right: 22px; }
+.fluid .answer-key { padding: 8px 12px; border-right-width: 4px; }
+.fluid .modal-foot { padding: 0 0 14px; }
+.fluid .btn-back { min-width: 120px; height: 54px; }
+.fluid .btn-back svg { width: 30px; height: 30px; }
+
+/* النتائج */
+.fluid .results-bg { position: fixed; }
+.fluid .laptop-frame {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  width: auto;
+  height: auto;
+  margin: 16px;
+  padding: 14px;
+  border-radius: 24px;
+}
+.fluid .laptop-screen { padding: 18px 12px; }
+.fluid #results-title { font-size: 32px; }
+.fluid .results-sub { font-size: 14px; }
+.fluid .results-shields { gap: 8px; margin: 12px 0; }
+.fluid .shield-badge.big { width: 46px; height: 46px; }
+.fluid .shield-badge.big svg { width: 28px; height: 28px; }
+.fluid .row { grid-template-columns: 1fr auto auto; gap: 10px; font-size: 16px; align-items: center; }
+.fluid .row-dots { display: none; }
+.fluid .row-label, .fluid .row-total .row-label { font-size: 15px; white-space: normal; }
+.fluid .row-pts small { font-size: 12px; }
+.fluid .results-best { font-size: 13px; }
+.fluid .results-actions { gap: 10px; flex-wrap: wrap; }
+.fluid .btn-solid { min-width: 120px; font-size: 17px; padding: 8px 20px; border-width: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
