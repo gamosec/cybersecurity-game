@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>غرفة الهروب السيبرانية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="viewport">
+    <div id="stage">
+
+      <!-- قائمة السيناريوهات -->
+      <section id="screen-menu" class="screen" aria-labelledby="menu-title">
+        <div class="menu-bg" aria-hidden="true"></div>
+        <header class="menu-header">
+          <p class="kicker">تحديات الأمن السيبراني</p>
+          <h1 id="menu-title">غرفة الهروب السيبرانية</h1>
+          <p class="menu-lead">اكتشف المخاطر الأمنية المخفية في كل غرفة قبل نفاد الوقت. اختر سيناريو للبدء.</p>
+        </header>
+        <div id="scenario-list" class="scenario-list"></div>
+      </section>
+
+      <!-- شاشة البداية للسيناريو -->
+      <section id="screen-intro" class="screen" aria-labelledby="intro-heading">
+        <div class="intro-art" id="intro-art" aria-hidden="true"></div>
+        <div class="intro-panel">
+          <div class="intro-panel-bg" id="intro-panel-bg" aria-hidden="true"></div>
+          <div class="intro-content">
+            <p class="intro-kicker" id="intro-kicker"></p>
+            <h2 class="intro-heading" id="intro-heading"></h2>
+            <p class="intro-scenario" id="intro-scenario"></p>
+            <p class="intro-desc" id="intro-desc"></p>
+            <button class="btn-pill" id="btn-start" type="button">بدء</button>
+          </div>
+          <button class="btn-link" id="btn-intro-back" type="button">→ العودة إلى السيناريوهات</button>
+        </div>
+      </section>
+
+      <!-- شاشة اللعب -->
+      <section id="screen-game" class="screen" aria-label="الغرفة">
+        <div class="scene" id="scene"></div>
+
+        <div class="hud">
+          <div class="hud-stats" role="status" aria-live="polite">
+            <div class="stat">
+              <span class="stat-label">عداد الوقت</span>
+              <span class="stat-value" id="hud-time">00:00</span>
+            </div>
+            <div class="stat-sep" aria-hidden="true"></div>
+            <div class="stat">
+              <span class="stat-label">الدرجة</span>
+              <span class="stat-value" id="hud-score">0</span>
+            </div>
+          </div>
+          <div class="hud-shields" id="hud-shields" aria-label="التقدم"></div>
+        </div>
+
+        <button class="side-btn side-btn-left" id="btn-hint" type="button" aria-label="تلميح"></button>
+        <button class="side-btn side-btn-right" id="btn-sound" type="button" aria-label="الصوت" style="top:190px"></button>
+        <button class="side-btn side-btn-right" id="btn-help" type="button" aria-label="المساعدة" style="top:310px"></button>
+
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+        <div class="popup" id="popup" role="dialog" aria-modal="false" aria-labelledby="popup-title" hidden>
+          <div class="popup-head">
+            <h3 id="popup-title"></h3>
+            <button class="popup-close" id="popup-close" type="button" aria-label="إغلاق">×</button>
+          </div>
+          <p class="popup-q">ما المخاطر المرتبطة بهذا العنصر؟ (اختر كل ما ينطبق)</p>
+          <ul class="popup-options" id="popup-options"></ul>
+          <div class="popup-foot">
+            <button class="btn-confirm" id="popup-confirm" type="button" aria-label="تأكيد الإجابة"></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- شاشة النتائج -->
+      <section id="screen-results" class="screen" aria-labelledby="results-title">
+        <div class="results-bg" id="results-bg" aria-hidden="true"></div>
+        <div class="laptop-frame">
+          <div class="laptop-screen">
+            <h2 id="results-title"></h2>
+            <p class="results-sub" id="results-sub"></p>
+            <div class="results-shields" id="results-shields"></div>
+            <div class="results-rows">
+              <div class="row">
+                <span class="row-label">الإجابات الصحيحة:</span>
+                <span class="row-val" id="r-correct"></span>
+                <span class="row-dots"></span>
+                <span class="row-pts" id="r-correct-pts"></span>
+              </div>
+              <div class="row">
+                <span class="row-label">الوقت المتبقي:</span>
+                <span class="row-val" id="r-time"></span>
+                <span class="row-dots"></span>
+                <span class="row-pts" id="r-time-pts"></span>
+              </div>
+              <div class="row row-total">
+                <span class="row-label">الدرجة النهائية:</span>
+                <span class="row-val"></span>
+                <span class="row-dots"></span>
+                <span class="row-pts" id="r-total"></span>
+              </div>
+            </div>
+            <p class="results-best" id="results-best"></p>
+            <div class="results-actions">
+              <button class="btn-solid" id="btn-retry" type="button">إعادة المحاولة</button>
+              <button class="btn-solid btn-light" id="btn-finish" type="button">إنهاء</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- نافذة منبثقة عامة -->
+      <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+        <div class="modal-card">
+          <h2 class="modal-title" id="modal-title"></h2>
+          <div class="modal-body" id="modal-body"></div>
+          <div class="modal-foot">
+            <button class="btn-pill btn-back" id="modal-close" type="button" aria-label="متابعة"></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div id="rotate-hint" role="note">لأفضل تجربة، أدر جهازك إلى الوضع الأفقي</div>
+
+  <script src="js/core.js"></script>
+  <script src="js/iso.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/scenarios/scenario1-home-office.js"></script>
+  <script src="js/scenarios/upcoming.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/* سيناريوهات قادمة — تظهر في القائمة كـ "قريبًا" حتى يُضاف محتواها */
+(function () {
+  'use strict';
+
+  const CE = window.CyberEscape;
+
+  [
+    { id: 'phishing', number: 2, icon: 'mail', title: 'رسائل التصيّد الاحتيالي', heading: 'صندوق البريد المشبوه' },
+    { id: 'passwords', number: 3, icon: 'key', title: 'كلمات المرور والمصادقة', heading: 'خزنة الحسابات' },
+    { id: 'social-engineering', number: 4, icon: 'users', title: 'الهندسة الاجتماعية', heading: 'الزائر غير المتوقع' }
+  ].forEach((s) => CE.registerScenario(Object.assign({ comingSoon: true }, s)));
+})();
