@@ -153,6 +153,11 @@
       const ch = challengeById(g.dataset.hotspot);
       if (!ch) return;
       g.classList.add('hotspot');
+      // data-hit="self": المجموعة تحدد منطقة النقر بنفسها (عناصر .hit) بدل المستطيل التلقائي
+      if (g.dataset.hit === 'self') {
+        bindHotspot(g, ch);
+        return;
+      }
       const bb = g.getBBox();
       const pad = 12;
       const hit = document.createElementNS(SVG_NS, 'rect');
@@ -163,13 +168,17 @@
       hit.setAttribute('height', bb.height + pad * 2);
       hit.setAttribute('rx', 12);
       g.insertBefore(hit, g.firstChild);
-      g.setAttribute('tabindex', '0');
-      g.setAttribute('role', 'button');
-      g.setAttribute('aria-label', ch.title);
-      g.addEventListener('click', (e) => { e.stopPropagation(); openChallenge(ch.id); });
-      g.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChallenge(ch.id); }
-      });
+      bindHotspot(g, ch);
+    });
+  }
+
+  function bindHotspot(g, ch) {
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', ch.title);
+    g.addEventListener('click', (e) => { e.stopPropagation(); openChallenge(ch.id); });
+    g.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChallenge(ch.id); }
     });
   }
 
