@@ -125,7 +125,8 @@
       const status = s.comingSoon ? 'قريبًا' : (best ? 'أفضل نتيجة: ' + best : 'ابدأ الآن ←');
       return '<button type="button" class="scenario-card' + (s.comingSoon ? ' locked' : '') + '" data-id="' + U.escape(s.id) + '"' +
         (s.comingSoon ? ' disabled aria-disabled="true"' : '') + '>' +
-        '<span class="card-thumb">' + (s.comingSoon ? (cardIcons[s.icon] || '') + '<span class="card-lock">' + icons.lock + '</span>' : sceneSvg(s)) + '</span>' +
+        '<span class="card-thumb">' + (s.comingSoon ? (cardIcons[s.icon] || '') + '<span class="card-lock">' + icons.lock + '</span>' : sceneSvg(s)) +
+        (s.isNew ? '<span class="card-new">جديد</span>' : '') + '</span>' +
         '<span class="card-num">السيناريو ' + s.number + '</span>' +
         '<span class="card-title">' + U.escape(s.title) + '</span>' +
         '<span class="card-sub">' + U.escape(s.heading || '') + '</span>' +

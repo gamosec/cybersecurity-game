@@ -413,6 +413,7 @@
     pointsPerChallenge: 50,
     timeBonusMax: 30,
     passRatio: 0.6,
+    isNew: true,
     viewBox: '0 0 1600 900',
     isoOrigin: [800, 300],
     challenges,
