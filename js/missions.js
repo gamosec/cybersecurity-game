@@ -1,9 +1,10 @@
 /*
  * وضع "المهمة" التفاعلي (الفريق الأحمر / الفريق الأزرق).
- * يختلف عن سيناريوهات الغرفة العادية: يتجول اللاعب في البيئة، يجد محطة الفريق
- * الأحمر (جهاز أحمر) فيخوض تحديات "كيف يتجاوز حماية الفريق الأزرق" بأسلوب التوعية
- * (اختيار نوع الأسلوب لا تفاصيله)، ثم ينتقل إلى محطة الفريق الأزرق فيضع أساليب
- * الحماية المناسبة عبر السحب والإفلات. الهدف تعليمي دفاعي بحت.
+ *
+ * الفكرة: يتجول المتدرب في بيئة محاكاة ويبحث بنفسه عن "محطة عمل الفريق الأحمر" (دون أن يُقال له
+ * شكلها أو لونها)، فتفتح له رسالة بريد ثم تحديات على شاشة الحاسوب: يختار الأساليب الصحيحة
+ * (على مستوى التوعية) لتجاوز ضابط أمني يضعه الفريق الأزرق. بعد إنهائها يبحث عن محطة الفريق الأزرق
+ * ويبني الدفاعات بالسحب والإفلات. التركيز التعليمي النهائي دائمًا على الحماية.
  *
  * بنية بيانات المهمة موثّقة في README.md.
  */
@@ -19,23 +20,40 @@
   const bulb = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3Z"/></svg>';
 
   const teamIcon = {
-    red: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h10l-2 3 2 3H4Z" fill="#ef4352"/><path d="M4 4v16" stroke="#ef4352" stroke-width="2" stroke-linecap="round"/></svg>',
+    red: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v18" stroke="#ef4352" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M6 4h12l-3 4 3 4H6Z" fill="#ef4352"/></svg>',
     blue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 19.4 5.4V11c0 5-3.1 8.9-7.4 10.5C7.7 19.9 4.6 16 4.6 11V5.4Z" fill="#3fa2e0"/><path d="m8.6 12 2.4 2.4 4.4-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
 
-  let root;          // عنصر #screen-mission
+  let root;
   const S = {
     mission: null,
-    scale: 1,
     timeLeft: 0,
     timerId: null,
     paused: false,
     over: false,
-    phase: 'red',    // red ثم blue
-    idx: 0,          // رقم التحدي ضمن الفريق الحالي
-    results: [],     // { team, id, correct }
+    phase: 'red',      // red ثم blue
+    idx: 0,            // رقم التحدي ضمن الفريق الحالي
+    emailSeen: {},     // أُظهرت رسالة الفريق؟
+    hintLevel: 0,
+    results: [],       // { team, id, correct }
     score: 0
   };
+
+  /* ---------------- مساعدات ---------------- */
+
+  function iconFor(o) {
+    if (o.icon) return CE.Icons.get(o.icon);
+    return CE.Icons.forText(o.text) || '';
+  }
+
+  function shuffle(a) {
+    a = a.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  function teamName(team) { return S.mission.teams[team].title; }
+  function teamDone(team) { return S.results.filter((r) => r.team === team).length >= S.mission.teams[team].challenges.length; }
 
   /* ---------------- إنشاء الشاشة ---------------- */
 
@@ -46,8 +64,8 @@
     root.className = 'screen';
     root.innerHTML =
       '<div class="m-scene" id="m-scene"></div>' +
-      '<div class="m-topbar"><span class="m-title" id="m-title"></span>' +
-      '<span class="m-time">عداد الوقت: <b id="m-time">00:00</b></span></div>' +
+      '<div class="m-topbar"><span class="m-time">عداد الوقت: <b id="m-time">00:00</b></span>' +
+      '<span class="m-title" id="m-title"></span></div>' +
       '<div class="m-side">' +
       '<div class="m-stat"><span>النقاط</span><b id="m-score">0</b></div>' +
       '<button class="m-stat m-hint" id="m-hint" type="button"><span>تلميحات</span>' + bulb + '</button>' +
@@ -56,9 +74,15 @@
       '<div class="m-overlay" id="m-overlay" hidden></div>';
     document.getElementById('stage').appendChild(root);
     root.querySelector('#m-hint').addEventListener('click', onHint);
-    root.querySelector('#m-scene').addEventListener('click', (e) => {
+    const scene = root.querySelector('#m-scene');
+    scene.addEventListener('click', (e) => {
       const g = e.target.closest('[data-station]');
-      if (g) onStation(g.dataset.station);
+      if (g) onStation(g);
+    });
+    scene.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const g = e.target.closest && e.target.closest('[data-station]');
+      if (g) { e.preventDefault(); onStation(g); }
     });
     window.addEventListener('resize', fitScene);
     return root;
@@ -75,12 +99,15 @@
 
   function start(mission) {
     ensureRoot();
+    stopTimer();
     S.mission = mission;
     S.timeLeft = mission.timeLimit;
     S.paused = false;
     S.over = false;
     S.phase = 'red';
     S.idx = 0;
+    S.emailSeen = {};
+    S.hintLevel = 0;
     S.results = [];
     S.score = 0;
     activate();
@@ -95,55 +122,55 @@
     const iso = new CE.Iso(m.isoOrigin[0], m.isoOrigin[1]);
     el('m-scene').innerHTML = '<svg viewBox="' + m.viewBox + '" xmlns="' + SVG_NS +
       '" preserveAspectRatio="xMidYMid meet" focusable="false">' + m.renderScene(iso) + '</svg>';
+    root.querySelectorAll('[data-station]').forEach((g) => {
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', g.dataset.name || 'محطة عمل');
+    });
     fitScene();
     refreshStations();
   }
 
   function fitScene() {
-    // المشهد يملأ العرض ويُقص في الوضع العمودي (مثل سيناريوهات الغرفة)
     const svg = el('m-scene') && el('m-scene').querySelector('svg');
-    if (!svg) return;
+    if (!svg || !S.mission) return;
     const fluid = window.innerWidth / window.innerHeight < 1.1;
-    svg.setAttribute('viewBox', fluid ? (S.mission.mobileViewBox || '260 20 1080 820') : S.mission.viewBox);
+    svg.setAttribute('viewBox', fluid ? (S.mission.mobileViewBox || '240 110 1120 760') : S.mission.viewBox);
+    const sc = el('m-scene');
+    if (fluid) sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2;
   }
 
+  // لا نُظهر أي إشارة (توهج/لون) على المحطة المطلوبة؛ فقط علامة ✓ بعد إنجاز محطة
   function refreshStations() {
-    const svg = el('m-scene').querySelector('svg');
-    if (!svg) return;
-    ['red', 'blue'].forEach((team) => {
-      svg.querySelectorAll('[data-station="' + team + '"]').forEach((g) => {
-        const done = S.results.some((r) => r.team === team) &&
-          S.results.filter((r) => r.team === team).length >= S.mission.teams[team].challenges.length;
-        const active = team === S.phase && !done;
-        g.classList.toggle('m-station-active', active);
-        g.classList.toggle('m-station-done', done);
-        g.classList.toggle('m-station-locked', !active && !done);
-        g.style.cursor = active ? 'pointer' : 'default';
-      });
+    root.querySelectorAll('[data-station="red"],[data-station="blue"]').forEach((g) => {
+      g.classList.toggle('m-station-done', teamDone(g.dataset.station));
     });
   }
 
-  /* ---------------- النوافذ (مقدمة/انتقال/نتيجة) ---------------- */
+  /* ---------------- النوافذ ---------------- */
 
-  function overlay(html, cls) {
+  function overlay(html, cls, keepRunning) {
     const o = el('m-overlay');
     o.className = 'm-overlay' + (cls ? ' ' + cls : '');
     o.innerHTML = html;
     o.hidden = false;
-    S.paused = true;
+    S.paused = !keepRunning;
     return o;
   }
   function closeOverlay() { el('m-overlay').hidden = true; S.paused = false; }
 
+  function panel(headIcon, headText, body, footBtn, cls) {
+    return '<div class="m-card ' + (cls || '') + '">' +
+      '<div class="m-card-head">' + headIcon + '<span>' + U.escape(headText) + '</span></div>' +
+      '<div class="m-card-body">' + body + '</div>' +
+      '<div class="m-card-foot">' + footBtn + '</div></div>';
+  }
+  const nextBtn = (id, label) => '<button class="m-next" id="' + id + '" type="button">' + icons.chevron + '<span>' + label + '</span></button>';
+
   function briefing() {
     const m = S.mission;
     const paras = (m.briefing.paragraphs || []).map((p) => '<p>' + U.escape(p) + '</p>').join('');
-    overlay(
-      '<div class="m-card m-brief">' +
-      '<div class="m-card-head">' + icons.help + '<span>' + U.escape(m.briefing.title || 'مقدمة') + '</span></div>' +
-      '<div class="m-card-body">' + paras + '</div>' +
-      '<div class="m-card-foot"><button class="m-next" id="m-brief-next" type="button">' + icons.chevron + '<span>التالي</span></button></div>' +
-      '</div>');
+    overlay(panel(bulb, m.briefing.title || 'مقدمة', paras, nextBtn('m-brief-next', 'التالي'), 'm-brief'));
     el('m-brief-next').addEventListener('click', () => {
       Sound.click();
       closeOverlay();
@@ -154,63 +181,119 @@
 
   function teamIntro(team) {
     const t = S.mission.teams[team];
-    overlay(
-      '<div class="m-card m-team-' + team + '">' +
-      '<div class="m-card-head">' + teamIcon[team] + '<span>' + U.escape(t.title) + '</span></div>' +
-      '<div class="m-card-body"><p>' + U.escape(t.intro) + '</p>' +
-      '<p class="m-find">ابحث في البيئة عن <b>محطة ' + (team === 'red' ? 'الفريق الأحمر (الجهاز الأحمر)' : 'الفريق الأزرق (الجهاز الأزرق)') + '</b> واضغط عليها لبدء التحديات.</p></div>' +
-      '<div class="m-card-foot"><button class="m-next" id="m-ti-next" type="button">' + icons.chevron + '<span>فهمت</span></button></div>' +
-      '</div>', 'm-intro-' + team);
-    el('m-ti-next').addEventListener('click', () => { Sound.click(); closeOverlay(); S.paused = false; });
-    S.paused = false; // المؤقت يعمل أثناء البحث عن المحطة
-    el('m-overlay').classList.add('m-pass'); // لا يوقف المؤقت
+    S.hintLevel = 0;
+    const body = '<p>' + U.escape(t.intro) + '</p>' +
+      '<p class="m-find">' + U.escape(t.find) + '</p>';
+    overlay(panel(teamIcon[team], t.title, body, nextBtn('m-ti-next', 'فهمت'), 'm-team-' + team), 'm-pass', true);
+    el('m-ti-next').addEventListener('click', () => {
+      Sound.click();
+      closeOverlay();
+      if (document.body.classList.contains('fluid')) toast('اسحب المشهد يمينًا ويسارًا للبحث عن المحطة');
+    });
   }
 
   /* ---------------- النقر على محطة ---------------- */
 
-  function onStation(team) {
-    if (S.over) return;
-    const done = S.results.filter((r) => r.team === team).length >= S.mission.teams[team].challenges.length;
-    if (team !== S.phase || done) {
-      toast(team === S.phase ? 'أكملت هذه المحطة.' : 'أكمل محطة الفريق ' + (S.phase === 'red' ? 'الأحمر' : 'الأزرق') + ' أولًا.');
+  function onStation(g) {
+    if (S.over || !el('m-overlay').hidden) return;
+    const kind = g.dataset.station;
+    if (kind === 'decoy') {
+      Sound.click();
+      toast((g.dataset.name ? 'هذه ' + g.dataset.name + '. ' : '') + 'ليست محطة عمل ' + teamName(S.phase) + '. واصل البحث.');
+      return;
+    }
+    if (kind !== S.phase || teamDone(kind)) {
+      Sound.click();
+      toast(teamDone(kind) ? 'أنجزت مهام ' + teamName(kind) + ' بالفعل.' : 'أنجز مهام ' + teamName(S.phase) + ' أولًا.');
       return;
     }
     Sound.open();
-    challenge();
+    if (!S.emailSeen[kind]) { S.emailSeen[kind] = true; showEmail(kind); } else challenge();
+  }
+
+  /* ---------------- شاشة الحاسوب ---------------- */
+
+  const desktopIcons =
+    '<div class="m-dicons" aria-hidden="true">' +
+    ['monitor', 'folder', 'printer', 'trash'].map((n) =>
+      '<div class="m-dicon">' + CE.Icons.get(n) + '<i></i></div>').join('') + '</div>';
+
+  function monitor(team, innerApp, cls) {
+    return '<div class="m-monitor m-mon-' + team + (cls ? ' ' + cls : '') + '">' +
+      '<div class="m-wall"></div>' + desktopIcons +
+      '<div class="m-app">' + innerApp + '</div></div>';
+  }
+
+  function appBar(team, title, xId) {
+    return '<div class="m-app-bar">' +
+      '<span class="m-ctl"><button type="button" class="m-x" ' + (xId ? 'id="' + xId + '"' : 'tabindex="-1"') + ' aria-label="إغلاق">' +
+      '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
+      '<i><svg viewBox="0 0 24 24"><rect x="5" y="8" width="11" height="11" rx="1.5"/><path d="M9 8V5h10v10h-3"/></svg></i>' +
+      '<i><svg viewBox="0 0 24 24"><path d="M6 18h12"/></svg></i></span>' +
+      '<span class="m-app-title">' + teamIcon[team] + '<span>' + U.escape(title) + '</span></span></div>';
+  }
+
+  const appTools =
+    '<div class="m-app-tools" aria-hidden="true"><span class="m-nav"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>' +
+    '<span class="m-addr"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"/></svg></span>' +
+    '<span class="m-search"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M15 15l5 5"/></svg></span></div>';
+
+  const sideLines = '<div class="m-side-list" aria-hidden="true">' +
+    Array.from({ length: 13 }, (_, i) => '<div><i></i><b style="width:' + (62 + ((i * 17) % 34)) + '%"></b></div>').join('') + '</div>';
+
+  function showEmail(team) {
+    const t = S.mission.teams[team];
+    const e = t.email;
+    const app =
+      appBar(team, t.title, 'm-x') + appTools +
+      '<div class="m-app-main"><div class="m-mail">' +
+      '<div class="m-mail-head">' +
+      '<div class="m-avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4.6"/><path d="M3.5 22c0-5 4-8 8.5-8s8.5 3 8.5 8Z"/></svg></div>' +
+      '<div class="m-mail-meta"><div class="m-field"><em>المرسل:</em> ' + U.escape(e.from) + ' <span dir="ltr">(' + U.escape(e.address) + ')</span></div>' +
+      '<div class="m-field"><em>الموضوع:</em> ' + U.escape(e.subject) + '</div></div></div>' +
+      '<div class="m-mail-body">' + e.body.map((p) => '<p>' + U.escape(p) + '</p>').join('') + '</div>' +
+      '<div class="m-mail-foot"><button class="m-send m-continue" id="m-mail-go" type="button">' + icons.check + '<span>متابعة</span></button></div>' +
+      '</div></div>';
+    overlay(monitor(team, app, 'm-mon-mail'), 'm-screen-ov', true);
+    el('m-x').classList.add('m-attn');
+    const go = () => { Sound.click(); challenge(); };
+    el('m-x').addEventListener('click', go);
+    el('m-mail-go').addEventListener('click', go);
   }
 
   /* ---------------- عرض التحدي ---------------- */
 
   function challenge() {
     const team = S.phase;
-    const ch = S.mission.teams[team].challenges[S.idx];
+    const t = S.mission.teams[team];
+    const ch = t.challenges[S.idx];
+    const isDnd = ch.ui === 'dnd';
     const order = shuffle(ch.options.map((o, i) => i));
-    const chips = order.map((i) => {
+
+    const cards = order.map((i) => {
       const o = ch.options[i];
-      return '<button type="button" class="m-chip" data-i="' + i + '" draggable="true">' + U.escape(o.text) + '</button>';
+      return '<button type="button" class="m-opt" data-i="' + i + '"' + (isDnd ? ' draggable="true"' : '') + '>' +
+        '<span class="m-opt-ic">' + iconFor(o) + '</span><span class="m-opt-tx">' + U.escape(o.text) + '</span></button>';
     }).join('');
 
-    const isDnd = ch.ui === 'dnd';
     const body = isDnd
       ? '<div class="m-dnd">' +
-          '<div class="m-tray" id="m-tray" aria-label="الخيارات">' + chips + '</div>' +
-          '<div class="m-drop-wrap"><span class="m-drop-label">' + U.escape(ch.instruction || 'اسحب الإجابات الصحيحة إلى هنا') + '</span>' +
-          '<div class="m-drop" id="m-drop" aria-label="صندوق الإجابة"></div></div>' +
+          '<div class="m-pool" id="m-tray" aria-label="الخيارات">' + cards + '</div>' +
+          '<div class="m-box-wrap"><span class="m-box-label">' + U.escape(ch.instruction || 'اسحب الإجابات الصحيحة إلى هنا') + '</span>' +
+          '<div class="m-box" id="m-drop" aria-label="صندوق الإجابة"></div></div>' +
         '</div>'
-      : '<div class="m-opts" id="m-tray">' + chips + '</div>';
+      : '<div class="m-cards" id="m-tray">' + cards + '</div>';
 
-    overlay(
-      '<div class="m-win m-win-' + team + '">' +
-      '<div class="m-win-bar"><span class="m-win-title">' + teamIcon[team] + ' ' + U.escape(S.mission.teams[team].title) + '</span>' +
-      '<span class="m-win-steps">' + (S.idx + 1) + ' / ' + S.mission.teams[team].challenges.length + '</span></div>' +
-      '<div class="m-win-body">' +
+    const app = appBar(team, t.title) + appTools +
+      '<div class="m-app-main">' +
+      '<div class="m-app-content">' +
+      '<div class="m-step" dir="ltr">' + (S.idx + 1) + ' / ' + t.challenges.length + '</div>' +
       '<p class="m-prompt">' + U.escape(ch.prompt) + '</p>' +
-      (ch.note ? '<p class="m-note">' + U.escape(ch.note) + '</p>' : '') +
       body +
-      '<div class="m-win-foot"><button class="m-send" id="m-send" type="button" disabled>' + icons.check + '<span>إرسال</span></button></div>' +
-      '</div></div>', 'm-win-overlay');
-    el('m-overlay').classList.remove('m-pass');
-    S.paused = false; // المؤقت يستمر أثناء الإجابة، ويتوقف فقط أثناء قراءة المقدمة والتغذية الراجعة
+      '<div class="m-app-foot"><button class="m-send" id="m-send" type="button" disabled>' + icons.check + '<span>إرسال</span></button></div>' +
+      '</div>' + sideLines + '</div>';
+
+    overlay(monitor(team, app), 'm-screen-ov', true);
     wireChallenge(ch, isDnd);
   }
 
@@ -219,19 +302,18 @@
     const tray = el('m-tray');
     const drop = isDnd ? el('m-drop') : null;
 
-    function selected() {
-      if (isDnd) return Array.from(drop.querySelectorAll('.m-chip')).map((c) => Number(c.dataset.i));
-      return Array.from(tray.querySelectorAll('.m-chip.on')).map((c) => Number(c.dataset.i));
-    }
-    function refresh() { send.disabled = selected().length === 0; }
+    const selected = () => {
+      if (isDnd) return Array.from(drop.querySelectorAll('.m-opt')).map((c) => Number(c.dataset.i));
+      return Array.from(tray.querySelectorAll('.m-opt.on')).map((c) => Number(c.dataset.i));
+    };
+    const refresh = () => { send.disabled = selected().length === 0; };
 
     if (isDnd) {
       const move = (chip, to) => { to.appendChild(chip); refresh(); };
-      tray.addEventListener('click', (e) => { const c = e.target.closest('.m-chip'); if (c) { Sound.click(); move(c, drop); } });
-      drop.addEventListener('click', (e) => { const c = e.target.closest('.m-chip'); if (c) { Sound.click(); move(c, tray); } });
-      // سحب وإفلات أصلي (تحسين لأجهزة سطح المكتب)
+      tray.addEventListener('click', (e) => { const c = e.target.closest('.m-opt'); if (c) { Sound.click(); move(c, drop); } });
+      drop.addEventListener('click', (e) => { const c = e.target.closest('.m-opt'); if (c) { Sound.click(); move(c, tray); } });
       let dragged = null;
-      root.querySelectorAll('.m-chip').forEach((c) => {
+      root.querySelectorAll('.m-opt').forEach((c) => {
         c.addEventListener('dragstart', () => { dragged = c; c.classList.add('m-dragging'); });
         c.addEventListener('dragend', () => { c.classList.remove('m-dragging'); dragged = null; });
       });
@@ -242,7 +324,7 @@
       });
     } else {
       tray.addEventListener('click', (e) => {
-        const c = e.target.closest('.m-chip');
+        const c = e.target.closest('.m-opt');
         if (!c) return;
         Sound.click();
         c.classList.toggle('on');
@@ -264,17 +346,10 @@
   function feedback(ch, correct) {
     const right = ch.options.filter((o) => o.correct).map((o) => U.escape(o.text)).join('، ');
     const tips = (ch.feedback.tips || []).map((t) => '<li>' + U.escape(t) + '</li>').join('');
-    overlay(
-      '<div class="m-card ' + (correct ? 'm-ok' : 'm-bad') + '">' +
-      '<div class="m-card-head">' + (correct ? icons.shieldCheck : icons.shieldOff) +
-      '<span>' + (correct ? 'إجابة صحيحة!' : 'إجابة غير صحيحة') + '</span></div>' +
-      '<div class="m-card-body">' +
-      (correct ? '' : '<p class="m-answer-key">الإجابات الصحيحة: <b>' + right + '</b></p>') +
-      '<p>' + U.escape(ch.feedback.summary) + '</p>' +
-      (tips ? '<ul>' + tips + '</ul>' : '') +
-      '</div>' +
-      '<div class="m-card-foot"><button class="m-next" id="m-fb-next" type="button">' + icons.chevron + '<span>متابعة</span></button></div>' +
-      '</div>', correct ? 'm-ok-ov' : 'm-bad-ov');
+    const body = (correct ? '' : '<p class="m-answer-key">الإجابات الصحيحة: <b>' + right + '</b></p>') +
+      '<p>' + U.escape(ch.feedback.summary) + '</p>' + (tips ? '<ul>' + tips + '</ul>' : '');
+    overlay(panel(correct ? icons.shieldCheck : icons.shieldOff, correct ? 'إجابة صحيحة!' : 'إجابة غير صحيحة', body,
+      nextBtn('m-fb-next', 'متابعة'), correct ? 'm-ok' : 'm-bad'), 'm-fb-ov');
     el('m-fb-next').addEventListener('click', () => { Sound.click(); closeOverlay(); advance(); });
   }
 
@@ -282,26 +357,19 @@
     const team = S.phase;
     S.idx += 1;
     refreshStations();
-    if (S.idx < S.mission.teams[team].challenges.length) {
-      challenge();                    // التحدي التالي لنفس الفريق
-      return;
-    }
-    if (team === 'red') {              // انتهى الفريق الأحمر → انتقل للأزرق
+    if (S.idx < S.mission.teams[team].challenges.length) { challenge(); return; }
+    if (team === 'red') {
       S.phase = 'blue';
       S.idx = 0;
-      refreshStations();
-      overlay(
-        '<div class="m-card m-team-blue">' +
-        '<div class="m-card-head">' + teamIcon.blue + '<span>أحسنت! انتهت مهمة الفريق الأحمر</span></div>' +
-        '<div class="m-card-body"><p>الآن بدّل القبّعة: انضم إلى <b>الفريق الأزرق</b> لبناء الدفاعات التي توقف تلك الهجمات.</p>' +
-        '<p class="m-find">ابحث عن <b>محطة الفريق الأزرق (الجهاز الأزرق)</b> في البيئة واضغط عليها.</p></div>' +
-        '<div class="m-card-foot"><button class="m-next" id="m-sw-next" type="button">' + icons.chevron + '<span>إلى الفريق الأزرق</span></button></div>' +
-        '</div>', 'm-intro-blue m-pass');
-      el('m-sw-next').addEventListener('click', () => { Sound.click(); closeOverlay(); S.paused = false; toast('اضغط على محطة الفريق الأزرق للمتابعة'); });
-      S.paused = false;
+      const t = S.mission.teams.blue;
+      S.hintLevel = 0;
+      overlay(panel(teamIcon.blue, 'أحسنت! انتهت مهمة ' + S.mission.teams.red.title,
+        '<p>' + U.escape(S.mission.switchText) + '</p><p class="m-find">' + U.escape(t.find) + '</p>',
+        nextBtn('m-sw-next', 'إلى ' + t.title), 'm-team-blue'), 'm-pass', true);
+      el('m-sw-next').addEventListener('click', () => { Sound.click(); closeOverlay(); });
       return;
     }
-    finish();                         // انتهى الفريقان
+    finish();
   }
 
   /* ---------------- المؤقت والـ HUD ---------------- */
@@ -337,19 +405,21 @@
     t.textContent = msg;
     t.classList.add('on');
     window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => t.classList.remove('on'), 2600);
+    toastTimer = window.setTimeout(() => t.classList.remove('on'), 3200);
   }
 
+  // التلميح الأول وصف للمكان فقط، والثاني يومض على المحطة المطلوبة
   function onHint() {
-    if (S.over) return;
+    if (S.over || !el('m-overlay').hidden) return;
     Sound.click();
     const team = S.phase;
-    const left = S.mission.teams[team].challenges.length - S.results.filter((r) => r.team === team).length;
-    toast('أنت الآن في الفريق ' + (team === 'red' ? 'الأحمر' : 'الأزرق') + '. تبقّى ' + left + ' تحديات. ابحث عن المحطة المتوهجة.');
-    const svg = el('m-scene').querySelector('svg');
-    svg && svg.querySelectorAll('[data-station="' + team + '"]').forEach((g) => {
+    const t = S.mission.teams[team];
+    S.hintLevel += 1;
+    if (S.hintLevel === 1) { toast('تلميح: ' + t.hint); return; }
+    toast('انظر إلى المحطة التي تومض.');
+    root.querySelectorAll('[data-station="' + team + '"]').forEach((g) => {
       g.classList.remove('m-pulse'); void g.getBBox(); g.classList.add('m-pulse');
-      window.setTimeout(() => g.classList.remove('m-pulse'), 2400);
+      window.setTimeout(() => g.classList.remove('m-pulse'), 2600);
     });
   }
 
@@ -358,15 +428,13 @@
   function finish(timedOut) {
     S.over = true;
     stopTimer();
-    closeOverlay();
     const m = S.mission;
     const total = m.teams.red.challenges.length + m.teams.blue.challenges.length;
     const correct = S.results.filter((r) => r.correct).length;
     const qPts = correct * m.pointsPerChallenge;
     const qMax = total * m.pointsPerChallenge;
     const pass = !timedOut && correct >= Math.ceil(total * (m.passRatio || 0.6));
-    // مكافأة الوقت تُمنح فقط عند اجتياز المهمة
-    const bonus = pass ? Math.round((Math.max(0, S.timeLeft) / m.timeLimit) * m.timeBonusMax) : 0;
+    const bonus = pass ? Math.round((Math.max(0, S.timeLeft) / m.timeLimit) * m.timeBonusMax) : 0;   // المكافأة عند النجاح فقط
     const grand = qPts + bonus;
     const max = qMax + m.timeBonusMax;
 
@@ -374,28 +442,27 @@
       const chs = m.teams[team].challenges;
       const c = S.results.filter((r) => r.team === team && r.correct).length;
       const done = S.results.filter((r) => r.team === team).length;
-      return '<div class="m-res-team m-team-' + team + '">' + teamIcon[team] +
+      return '<div class="m-res-team">' + teamIcon[team] +
         '<span class="m-res-name">' + U.escape(m.teams[team].title) + '</span>' +
-        '<span class="m-res-num">' + c + ' / ' + chs.length + (done < chs.length ? ' (لم يكتمل)' : '') + '</span></div>';
+        '<span class="m-res-num"><span dir="ltr">' + c + ' / ' + chs.length + '</span>' + (done < chs.length ? ' (لم يكتمل)' : '') + '</span></div>';
     };
 
     const key = 'cyberEscape.best.' + m.id;
     const prev = parseInt(U.storageGet(key), 10);
-    let best = '';
+    let best;
     if (isNaN(prev) || grand > prev) { U.storageSet(key, String(grand)); best = isNaN(prev) ? '' : 'رقم قياسي جديد! 🎉'; }
     else best = 'أفضل نتيجة سابقة: ' + prev;
 
     overlay(
       '<div class="m-card m-result ' + (pass ? 'm-ok' : 'm-bad') + '">' +
       '<h2 class="m-res-title">' + (pass ? 'نجحت في المهمة!' : (timedOut ? 'انتهى الوقت!' : 'لم تكتمل المهمة')) + '</h2>' +
-      '<p class="m-res-sub">' + (pass ? 'أتقنت التفكير الهجومي والدفاعي معًا.' : 'راجع الدفاعات الصحيحة وحاول مجددًا.') + '</p>' +
+      '<p class="m-res-sub">' + (pass ? 'أتقنت التفكير الهجومي والدفاعي معًا.' : 'راجع الدفاعات الصحيحة وأعد المحاولة.') + '</p>' +
       row('red') + row('blue') +
       '<div class="m-res-rows">' +
-      '<div><span>الإجابات الصحيحة</span><b>' + correct + ' / ' + total + '</b><em>' + qPts + ' / ' + qMax + '</em></div>' +
-      '<div><span>مكافأة الوقت</span><b>' + U.formatTime(Math.max(0, S.timeLeft)) + '</b><em>' + bonus + ' / ' + m.timeBonusMax + '</em></div>' +
+      '<div><span>الإجابات الصحيحة</span><b dir="ltr">' + correct + ' / ' + total + '</b><em>' + qPts + ' / ' + qMax + '</em></div>' +
+      '<div><span>مكافأة الوقت</span><b dir="ltr">' + U.formatTime(Math.max(0, S.timeLeft)) + '</b><em>' + bonus + ' / ' + m.timeBonusMax + '</em></div>' +
       '<div class="m-res-total"><span>الدرجة النهائية</span><b></b><em>' + grand + ' / ' + max + '</em></div>' +
-      '</div>' +
-      review() +
+      '</div>' + review() +
       '<p class="m-res-best">' + best + '</p>' +
       '<div class="m-res-actions">' +
       '<button class="m-btn" id="m-retry" type="button">إعادة المحاولة</button>' +
@@ -421,7 +488,7 @@
           (state === 'ok' ? '' : '<small>الصحيح: ' + right + '</small>') + '</span></li>';
       });
     });
-    return '<details class="m-review"' + (S.results.every((r) => r.correct) ? '' : ' open') + '>' +
+    return '<details class="m-review"' + (S.results.every((r) => r.correct) && S.results.length ? '' : ' open') + '>' +
       '<summary>مراجعة إجاباتك</summary><ul>' + items + '</ul></details>';
   }
 
@@ -429,12 +496,6 @@
     stopTimer();
     closeOverlay();
     if (CE.engine) { CE.engine.renderMenu(); CE.engine.show('screen-menu'); }
-  }
-
-  function shuffle(a) {
-    a = a.slice();
-    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a;
   }
 
   CE.Mission = { start };

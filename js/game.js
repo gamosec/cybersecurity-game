@@ -121,6 +121,7 @@
 
   function renderMenu() {
     const list = $('scenario-list');
+    list.classList.toggle('many', CE.scenarios.length > 6); // قائمة مدمجة بأربعة أعمدة عند كثرة السيناريوهات
     list.innerHTML = CE.scenarios.map((s) => {
       const best = U.storageGet('cyberEscape.best.' + s.id);
       const status = s.comingSoon ? 'قريبًا' : (best ? 'أفضل نتيجة: ' + best : 'ابدأ الآن ←');
@@ -271,8 +272,11 @@
     $('popup-options').innerHTML = order.map((i) => ch.options[i]).map((o, k) =>
       '<li><label class="opt">' +
       '<input type="checkbox" value="' + order[k] + '">' +
-      '<span class="opt-box" aria-hidden="true">' + icons.check + '</span>' +
+      '<span class="opt-card">' +
+      '<span class="opt-ic" aria-hidden="true">' + (CE.Icons.forText(o.text) || '') + '</span>' +
       '<span class="opt-text">' + U.escape(o.text) + '</span>' +
+      '<span class="opt-box" aria-hidden="true">' + icons.check + '</span>' +
+      '</span>' +
       '</label></li>').join('');
     popup.hidden = false;
     popup.classList.remove('shake');
