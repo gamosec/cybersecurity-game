@@ -188,5 +188,10 @@
     return null;
   }
 
-  CE.Icons = { get: get, forText: forText, names: Object.keys(bases), badges: Object.keys(badges), rules: rules };
+  // الأيقونة الصريحة (option.icon) لها الأولوية، وإلا تُختار من نص الخيار
+  function forOption(o) {
+    return o.icon ? get(o.icon) : (forText(o.text) || '');
+  }
+
+  CE.Icons = { get: get, forText: forText, forOption: forOption, names: Object.keys(bases), badges: Object.keys(badges), rules: rules };
 })();

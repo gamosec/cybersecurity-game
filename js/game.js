@@ -273,7 +273,7 @@
       '<li><label class="opt">' +
       '<input type="checkbox" value="' + order[k] + '">' +
       '<span class="opt-card">' +
-      '<span class="opt-ic" aria-hidden="true">' + (CE.Icons.forText(o.text) || '') + '</span>' +
+      '<span class="opt-ic" aria-hidden="true">' + CE.Icons.forOption(o) + '</span>' +
       '<span class="opt-text">' + U.escape(o.text) + '</span>' +
       '<span class="opt-box" aria-hidden="true">' + icons.check + '</span>' +
       '</span>' +

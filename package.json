@@ -1,0 +1,14 @@
+{
+  "name": "cybersecurity-escape-room",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arabic cyber security awareness escape-room game (static HTML/CSS/JS, no build step)",
+  "scripts": {
+    "check": "node tools/check-content.js",
+    "test": "node tests/e2e.js",
+    "test:quick": "node tests/e2e.js --modes desktop",
+    "serve": "python3 -m http.server 8000",
+    "new-scenario": "node tools/new-scenario.js"
+  },
+  "devDependencies": {}
+}

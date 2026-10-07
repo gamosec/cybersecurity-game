@@ -41,10 +41,7 @@
 
   /* ---------------- مساعدات ---------------- */
 
-  function iconFor(o) {
-    if (o.icon) return CE.Icons.get(o.icon);
-    return CE.Icons.forText(o.text) || '';
-  }
+  function iconFor(o) { return CE.Icons.forOption(o); }
 
   function shuffle(a) {
     a = a.slice();
