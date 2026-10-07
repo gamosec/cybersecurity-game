@@ -106,7 +106,8 @@
     'screen-menu': ['scenario-list'],
     'screen-intro': ['intro-art', 'intro-panel-bg'],
     'screen-game': ['scene'],
-    'screen-results': ['results-bg']
+    'screen-results': ['results-bg'],
+    'screen-mission': ['m-scene']
   };
 
   function show(id) {
@@ -156,7 +157,11 @@
     $('btn-start').focus();
   }
 
-  $('btn-start').addEventListener('click', () => { Sound.click(); startGame(state.scenario); });
+  $('btn-start').addEventListener('click', () => {
+    Sound.click();
+    if (state.scenario.type === 'mission') { CE.Mission.start(state.scenario); return; }
+    startGame(state.scenario);
+  });
   $('btn-intro-back').addEventListener('click', () => { Sound.click(); renderMenu(); show('screen-menu'); });
 
   /* ---------------- اللعب ---------------- */
@@ -532,6 +537,8 @@
     fit();
     if (!popup.hidden && state.active) positionPopup(state.active);
   });
+
+  CE.engine = { show: show, renderMenu: renderMenu };
 
   fit();
   renderMenu();
