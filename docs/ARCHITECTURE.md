@@ -82,6 +82,15 @@ docs/                      هذه الوثائق
 - السحب والإفلات: أحداث `dragstart/dragover/drop` على الحاسوب + النقر لنقل البطاقة بين الصندوقين (للمس).
 - الأيقونة: `option.icon` إن وُجد، وإلا `CE.Icons.forText(option.text)`.
 
+## 5.1) محرك الرحلات (`js/journeys.js`)
+
+- يبني `#screen-journey` عند أول استخدام: عالم SVG واحد (`#j-world`) + HUD + شريط قصة + أزرار + `#j-overlay` للنوافذ + `#j-curtain` للانتقال بين المشاهد. يصدّر `CE.Journey = { start, ring, qrSvg }` (`ring` يرسم حلقة الإبراز لعنصر).
+- المحتوى: `scenes[]` في ملف السيناريو. لكل مشهد: `id, caption, narration, hint, cam:[x,y,w,h], camMobile, kind ('choice'|'items'|'wifi'), feedback{summary,tips}`. `choice`: `focus, device ('call'|'camera'), deviceInfo, prompt, multi, options[{text,icon,correct}]`. `items`: `items[{id,text,icon,take,why}], sendLabel`. `wifi`: `focus, receipt, networks[{id,name,sub,secure,bars,trusted,why}]`.
+- الرسم: `renderScene(iso)` يرسم العالم كله مرة واحدة؛ العناصر القابلة للنقر تحمل `data-focus="…"` (تفتح تفاعل المشهد) أو `data-item="…"` (غرض يُختار). المحرك يضيف تلقائيًا `<rect class="hit">` **آخر** كل عنصر.
+- الكاميرا: تحريك `viewBox` للعالم 900ms (فوري عند الحركة المخفّضة)، وفي الهاتف العمودي `camMobile`. الجزء العلوي ~132px تغطيه HUD فاحسب `cam` بحيث لا يختبئ شيء تحته.
+- التقييم: `choice` مطابقة تامة؛ `items` مجموعة المأخوذ = مجموعة `take:true`؛ `wifi` صحيح عند `networks[اختيار].trusted && VPN مفعّل`. 50 نقطة/مشهد + مكافأة وقت (30، تُمنح دائمًا كالغرف). النجاح `passRatio` (0.6). النتائج تستخدم `#screen-results` المشترك.
+- المؤقت يتوقف أثناء النوافذ والستارة. الأقسام الأخرى كما في الغرف: `CE.engine.sceneSvg(j)` للخلفية.
+
 ## 6) طبقة الرسم
 
 ### `Iso` (js/iso.js)

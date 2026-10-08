@@ -107,7 +107,8 @@
     'screen-intro': ['intro-art', 'intro-panel-bg'],
     'screen-game': ['scene'],
     'screen-results': ['results-bg'],
-    'screen-mission': ['m-scene']
+    'screen-mission': ['m-scene'],
+    'screen-journey': ['j-world']
   };
 
   function show(id) {
@@ -161,6 +162,7 @@
   $('btn-start').addEventListener('click', () => {
     Sound.click();
     if (state.scenario.type === 'mission') { CE.Mission.start(state.scenario); return; }
+    if (state.scenario.type === 'journey') { CE.Journey.start(state.scenario); return; }
     startGame(state.scenario);
   });
   $('btn-intro-back').addEventListener('click', () => { Sound.click(); renderMenu(); show('screen-menu'); });
@@ -468,7 +470,10 @@
     $('btn-finish').focus();
   }
 
-  $('btn-retry').addEventListener('click', () => { Sound.click(); startGame(state.scenario); });
+  $('btn-retry').addEventListener('click', () => {
+    Sound.click();
+    if (state.scenario.type === 'journey') CE.Journey.start(state.scenario); else startGame(state.scenario);
+  });
   $('btn-finish').addEventListener('click', () => { Sound.click(); renderMenu(); show('screen-menu'); });
 
   /* ---------------- أزرار جانبية ---------------- */
@@ -542,7 +547,7 @@
     if (!popup.hidden && state.active) positionPopup(state.active);
   });
 
-  CE.engine = { show: show, renderMenu: renderMenu };
+  CE.engine = { show: show, renderMenu: renderMenu, sceneSvg: sceneSvg };
 
   fit();
   renderMenu();

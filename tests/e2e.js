@@ -150,6 +150,53 @@ async function playMission(browser, mode, sc, path_) {
   await ctx.close();
 }
 
+/* ---------- الرحلات (journey) ---------- */
+async function playJourney(browser, mode, sc, path_) {
+  const tag = `${sc.id}/${mode}/${path_}`;
+  const { ctx, page } = await newPage(browser, mode);
+  await page.click(`.scenario-card[data-id="${sc.id}"]`);
+  await page.click('#btn-start');
+  await page.click('#j-go');
+  const pass = path_ === 'pass';
+  for (let i = 0; i < sc.scenes.length; i++) {
+    const c = sc.scenes[i];
+    await page.waitForFunction((cap) => document.querySelector('#j-chip') && document.querySelector('#j-chip').textContent === cap, c.caption, { timeout: 8000 });
+    await page.waitForTimeout(i ? 2300 : 600);
+    await shot(page, tag.replace(/\//g, '-') + '-s' + (i + 1) + '-world');
+    if (c.kind === 'items') {
+      const picks = pass ? c.items.filter((it) => it.take) : [c.items.find((it) => it.take)];
+      for (const it of picks) await clickIn(page.locator(`[data-item="${it.id}"] .hit`));
+      await clickIn(page.locator('#j-dock-send'));
+    } else {
+      await clickIn(page.locator(`[data-focus="${c.focus}"] .hit`).first());
+      if (c.kind === 'choice') {
+        await page.waitForSelector('.j-opt');
+        check(await page.locator('.j-opt svg').count() >= c.options.length, `${tag}: ${c.id} خيارات بلا أيقونة`);
+        const idx = c.options.map((o, k) => (!!o.correct === pass ? k : -1)).filter((k) => k >= 0);
+        for (const k of (pass ? idx : [idx[0]])) await clickIn(page.locator(`.j-opt[data-i="${k}"]`));
+        await shot(page, tag.replace(/\//g, '-') + '-s' + (i + 1) + '-choice');
+      } else {
+        await page.waitForSelector('.j-net');
+        const k = c.networks.findIndex((n) => !!n.trusted === pass);
+        await clickIn(page.locator(`.j-net[data-i="${k}"]`));
+        if (pass) await clickIn(page.locator('#j-vpn'));
+        await shot(page, tag.replace(/\//g, '-') + '-s' + (i + 1) + '-wifi');
+      }
+      await clickIn(page.locator('#j-send'));
+    }
+    await page.waitForSelector('#j-next');
+    const head = (await page.textContent('.j-fb .modal-title')).trim();
+    check(pass ? head.includes('أحسنت') : !head.includes('أحسنت'), `${tag}: ${c.id} حكمه "${head}"`);
+    await clickIn(page.locator('#j-next'));
+  }
+  await page.waitForFunction(() => document.getElementById('screen-results').classList.contains('active') || getComputedStyle(document.getElementById('screen-results')).display !== 'none', null, { timeout: 8000 });
+  const title = (await page.textContent('#results-title')).trim();
+  check(pass ? title.includes('تهانينا') : title.includes('حاول'), `${tag}: عنوان النتيجة "${title}"`);
+  await shot(page, tag.replace(/\//g, '-') + '-result');
+  check(page.errs.length === 0, `${tag}: أخطاء الصفحة ${JSON.stringify(page.errs)}`);
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   const probe = await newPage(browser, 'desktop');
@@ -161,12 +208,12 @@ async function playMission(browser, mode, sc, path_) {
 
   const list = scenarios.filter((s) => !ONLY || ONLY.includes(s.id));
   for (const sc of list) {
-    process.stdout.write(`• ${sc.id} (${sc.type === 'mission' ? 'مهمة' : 'غرفة'}) `);
+    process.stdout.write(`• ${sc.id} (${sc.type === 'mission' ? 'مهمة' : sc.type === 'journey' ? 'رحلة' : 'غرفة'}) `);
     const before = fail;
     for (const mode of MODES) for (const p of ['pass', 'fail']) {
-      if (sc.type === 'mission') await playMission(browser, mode, sc, p); else await playRoom(browser, mode, sc, p);
+      if (sc.type === 'mission') await playMission(browser, mode, sc, p); else if (sc.type === 'journey') await playJourney(browser, mode, sc, p); else await playRoom(browser, mode, sc, p);
     }
-    if (sc.type !== 'mission') await timeUpRoom(browser, sc);
+    if (sc.type === 'room' || !sc.type) await timeUpRoom(browser, sc);
     console.log(fail === before ? '✓' : '✗');
   }
   await browser.close();

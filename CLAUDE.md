@@ -24,9 +24,9 @@ python3 -m http.server 8000        # or just open index.html (file://)
 Playwright is preinstalled in the cloud env (`/opt/node22/lib/node_modules/playwright`, Chromium in `/opt/pw-browsers`; do **not** run `playwright install`). Screenshots: `node tests/e2e.js --shots <dir>` then Read the PNGs to review visuals — **always look at the rendering after changing graphics/CSS**; tests can't judge looks.
 
 ## Architecture in 10 lines
-- Namespace `window.CyberEscape` (`CE`). Scripts load in a fixed order in `index.html` (`core, iso, icon-lib, audio, missions, scenarios…, upcoming, game` — `game.js` last).
+- Namespace `window.CyberEscape` (`CE`). Scripts load in a fixed order in `index.html` (`core, iso, icon-lib, audio, missions, journeys, scenarios…, upcoming, game` — `game.js` last).
 - `js/core.js` registry (`registerScenario`, `getScenario`), utils, small UI icons. `js/iso.js` isometric SVG helper (`Iso`). `js/icon-lib.js` illustrated answer icons. `js/audio.js` WebAudio sounds.
-- `js/game.js` = engine for **room scenarios** (menu, intro, hotspot room, popup answers, results). `js/missions.js` = engine for **missions** (Red/Blue team: find station → email → challenges on a computer screen).
+- `js/game.js` = engine for **room scenarios** (menu, intro, hotspot room, popup answers, results). `js/missions.js` = engine for **missions** (Red/Blue team: find station → email → challenges on a computer screen). `js/journeys.js` = engine for **journeys** (one big world, camera moves between scenes; choice / items / wifi kinds; see ARCHITECTURE §5.1).
 - Each scenario is ONE file in `js/scenarios/` that calls `CE.registerScenario({...})` with content + `renderScene(iso)` + `renderIntroArt()`.
 - Stage is a fixed 1600×900 box scaled with CSS transform; portrait/narrow screens (`aspect < 1.1`) switch to `body.fluid` layout (swipeable scene, bottom-sheet popup).
 - State is in-memory; only `localStorage` keys `cyberEscape.best.<id>` and `cyberEscape.sound`.
